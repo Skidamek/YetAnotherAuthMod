@@ -5,7 +5,7 @@
 	"name": "YetAnotherAuthMod",
 	"description": "This is an example description! Tell everyone what your mod is about!",
 	"authors": [
-		"Me!"
+		"Skidam"
 	],
 	"contact": {
 		"homepage": "https://fabricmc.net/",
@@ -16,7 +16,7 @@
 	"environment": "*",
 	"entrypoints": {
 		"main": [
-			"pl.yetanotherauthmod.ExampleMod"
+          "pl.yetanotherauthmod.yaam"
 		]
 	},
 	"mixins": [
