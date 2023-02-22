@@ -1,4 +1,4 @@
-package pl.yetanotherauthmod;
+package pl.skidam.yetanotherauthmod;
 
 import eu.pb4.polymer.networking.api.EarlyPlayNetworkHandler;
 import net.fabricmc.api.ModInitializer;
@@ -15,12 +15,10 @@ public class yaam implements ModInitializer {
 	public static final String MOD_ID = "yetanotherauthmod";
 	public static final Logger LOGGER = LoggerFactory.getLogger(MOD_ID);
 	public static LoginDatabase database;
+	public static SessionDatabase sessions;
 
 	@Override
 	public void onInitialize() {
-
-		LOGGER.info("Hello Fabric world!");
-
 		Path databasePath = Path.of("./yaam/database.json");
 		if (!Files.exists(databasePath)) {
 			try {
@@ -31,11 +29,21 @@ public class yaam implements ModInitializer {
 			}
 		}
 
+		Path sessionsPath = Path.of("./yaam/sessions.json");
+		if (!Files.exists(sessionsPath)) {
+			try {
+				Files.createDirectories(sessionsPath.getParent());
+				Files.createFile(sessionsPath);
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+		}
+
+		sessions = new SessionDatabase(sessionsPath);
 		database = new LoginDatabase(databasePath);
-
-
 
 		EarlyPlayNetworkHandler.register(LimboHandler::new);
 
+		LOGGER.info("YetAnotherAuthMod initialized");
 	}
 }

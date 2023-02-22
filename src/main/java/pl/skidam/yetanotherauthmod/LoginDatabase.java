@@ -1,4 +1,4 @@
-package pl.yetanotherauthmod;
+package pl.skidam.yetanotherauthmod;
 
 import com.google.common.reflect.TypeToken;
 import com.google.gson.Gson;
@@ -22,19 +22,20 @@ public class LoginDatabase {
         load();
     }
 
-    public boolean addUser(String login, String password) {
+    public void addUser(String login, String password) {
         if (users.containsKey(login)) {
-            return false;
+            return;
         }
+        password = Utils.sha256(password);
         users.put(login, password);
         save();
-        return true;
     }
 
     public boolean checkLogin(String login, String password) {
         if (!users.containsKey(login)) {
             return false;
         }
+        password = Utils.sha256(password);
         return users.get(login).equals(password);
     }
 
@@ -57,7 +58,6 @@ public class LoginDatabase {
             e.printStackTrace();
         }
     }
-
 
     private void save() {
         try {

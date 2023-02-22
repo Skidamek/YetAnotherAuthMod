@@ -16,7 +16,7 @@
 	"environment": "*",
 	"entrypoints": {
 		"main": [
-          "pl.yetanotherauthmod.yaam"
+			"pl.skidam.yetanotherauthmod.yaam"
 		]
 	},
 	"mixins": [
