@@ -44,9 +44,7 @@ public abstract class ServerLoginNetworkHandlerMixin {
             cancellable = true
     )
     private void checkPremium(LoginHelloC2SPacket packet, CallbackInfo ci) {
-        System.out.println("Hello packet received");
         try {
-            System.out.println("Checking player " + packet.name() + " account status");
             String playerName = (new GameProfile(null, packet.name())).getName().toLowerCase();
             // Checking account status from API
             HttpsURLConnection httpsURLConnection = (HttpsURLConnection) new URL("https://api.mojang.com/users/profiles/minecraft/" + playerName).openConnection();
@@ -54,19 +52,12 @@ public abstract class ServerLoginNetworkHandlerMixin {
             httpsURLConnection.setConnectTimeout(5000);
             httpsURLConnection.setReadTimeout(5000);
 
-
             int response = httpsURLConnection.getResponseCode();
             httpsURLConnection.disconnect();
 
-            System.out.println(response);
-
             if (response == HttpURLConnection.HTTP_OK) { // Player has a Mojang account
-                System.out.println("Player " + playerName + " has a Mojang account");
-                // Caches the request
-                mojangAccountNamesCache.add(playerName);
-            } else {
-                System.out.println("Player " + playerName + " doesn't have a Mojang account");
-                // Player doesn't have a Mojang account
+                mojangAccountNamesCache.add(playerName); // Caches player name
+            } else { // Player doesn't have a Mojang account
                 this.state = ServerLoginNetworkHandler.State.READY_TO_ACCEPT;
                 this.profile = new GameProfile(null, packet.name());
                 ci.cancel();
