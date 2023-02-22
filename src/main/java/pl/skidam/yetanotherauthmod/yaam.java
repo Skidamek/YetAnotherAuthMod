@@ -9,6 +9,7 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.HashSet;
 
 public class yaam implements ModInitializer {
 
@@ -16,6 +17,12 @@ public class yaam implements ModInitializer {
 	public static final Logger LOGGER = LoggerFactory.getLogger(MOD_ID);
 	public static LoginDatabase database;
 	public static SessionDatabase sessions;
+
+	/**
+	 * HashSet of player names that have Mojang accounts.
+	 * If player is saved in here, they will be treated as online-mode ones.
+	 */
+	public static final HashSet<String> mojangAccountNamesCache = new HashSet<>();
 
 	@Override
 	public void onInitialize() {

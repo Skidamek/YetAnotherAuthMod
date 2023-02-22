@@ -25,6 +25,8 @@ import net.minecraft.util.Identifier;
 
 import java.util.function.Function;
 
+import static pl.skidam.yetanotherauthmod.yaam.mojangAccountNamesCache;
+
 public class LimboHandler extends EarlyPlayNetworkHandler {
     private static final ArmorStandEntity FAKE_ENTITY = new ArmorStandEntity(EntityType.ARMOR_STAND, PolymerCommonUtils.getFakeWorld());
     private static final CommandDispatcher<LimboHandler> COMMANDS = new CommandDispatcher<>();
@@ -37,8 +39,12 @@ public class LimboHandler extends EarlyPlayNetworkHandler {
         String playerIP = Utils.extractContentInBrackets(this.getConnection().getAddress().toString());
 
         // If player is authenticated / has active session, join normal game
-        if (yaam.sessions.checkSession(playerName, playerIP, false)) {
+        if (yaam.sessions.checkSession(playerName, playerIP, false) || yaam.sessions.checkSession(playerName, playerIP, true)) {
             this.sendPacket(new GameMessageS2CPacket(Text.literal("Authenticated using login session!").formatted(Formatting.GREEN), false));
+            this.continueJoining();
+            return;
+        } else if (mojangAccountNamesCache.contains(playerName.toLowerCase())) {
+            this.sendPacket(new GameMessageS2CPacket(Text.literal("Authenticated using Mojang account!").formatted(Formatting.GREEN), false));
             this.continueJoining();
             return;
         }

@@ -19,6 +19,7 @@
 			"pl.skidam.yetanotherauthmod.yaam"
 		]
 	},
+	"accessWidener": "yetanotherauthmod.accesswidener",
 	"mixins": [
 		"yetanotherauthmod.mixins.json"
 	],
