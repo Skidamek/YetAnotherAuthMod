@@ -43,12 +43,14 @@ public abstract class ServerLoginNetworkHandlerMixin {
             // It needs to be lowercase otherwise mojang api not work as expected
             String playerName = packet.name().toLowerCase();
 
-            if (Utils.hasPurchasedMinecraft(playerName)) {
-                mojangAccounts.add(playerName);
-            } else {
-                this.state = ServerLoginNetworkHandler.State.READY_TO_ACCEPT;
-                this.profile = new GameProfile(null, packet.name());
-                ci.cancel();
+            if (!mojangAccounts.contains(playerName)) {
+                if (Utils.hasPurchasedMinecraft(playerName)) {
+                    mojangAccounts.add(playerName);
+                } else {
+                    this.state = ServerLoginNetworkHandler.State.READY_TO_ACCEPT;
+                    this.profile = new GameProfile(null, packet.name());
+                    ci.cancel();
+                }
             }
 
         } catch (IOException e) {
