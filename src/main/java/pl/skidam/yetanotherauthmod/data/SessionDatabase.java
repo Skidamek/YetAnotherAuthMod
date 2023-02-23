@@ -1,4 +1,4 @@
-package pl.skidam.yetanotherauthmod;
+package pl.skidam.yetanotherauthmod.data;
 
 import com.google.common.reflect.TypeToken;
 import com.google.gson.Gson;
@@ -23,12 +23,12 @@ public class SessionDatabase {
         load();
     }
 
-    public void createSession(String login, String IP, boolean onlineMode) {
+    public void createSession(String login, String IP) {
         if (sessions.containsKey(login)) {
             deleteSession(login); // Delete old session
         }
         String now = String.valueOf(System.currentTimeMillis());
-        sessions.put(login, new Session(IP, onlineMode, now));
+        sessions.put(login, new Session(IP, now));
         save();
     }
 
@@ -59,18 +59,13 @@ public class SessionDatabase {
         return ExpiresDate > CurrentDate;
     }
 
-    public boolean checkSession(String login, String IP, boolean onlineMode) {
+    public boolean checkSession(String login, String IP) {
         if (!sessions.containsKey(login)) {
             return false;
         }
 
-        if (!sessions.get(login).getIP().equals(IP)) {
+        if (!sessions.get(login).IP().equals(IP)) {
             return false;
-        }
-
-        // if player is online, that means he is authenticated by mojang, so let their in
-        if (sessions.get(login).getOnlineMode() && onlineMode) {
-            return true;
         }
 
         return activeSession(login);
@@ -92,7 +87,6 @@ public class SessionDatabase {
         }
     }
 
-
     private void save() {
         try {
             String json = gson.toJson(sessions);
@@ -103,27 +97,9 @@ public class SessionDatabase {
     }
 
 
-    private static class Session {
-        private final String IP;
-        private final Boolean onlineMode;
-        private final String CreationDate;
-
-        public Session(String IP, Boolean onlineMode, String CreationDate) {
-            this.IP = IP;
-            this.onlineMode = onlineMode;
-            this.CreationDate = CreationDate;
-        }
-
-        public String getIP() {
-            return IP;
-        }
-
-        public Boolean getOnlineMode() {
-            return onlineMode;
-        }
-
+    private record Session(String IP, String CreationDate) {
         public String getCreationDate() {
-            return CreationDate;
+                return CreationDate;
+            }
         }
-    }
 }

@@ -1,74 +1,63 @@
 package pl.skidam.yetanotherauthmod.mixin;
 
 import com.mojang.authlib.GameProfile;
+import net.minecraft.network.ClientConnection;
 import net.minecraft.network.packet.c2s.login.LoginHelloC2SPacket;
+import net.minecraft.network.packet.s2c.login.LoginDisconnectS2CPacket;
 import net.minecraft.server.network.ServerLoginNetworkHandler;
+import net.minecraft.text.Text;
+import net.minecraft.util.Formatting;
+import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Mutable;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+import pl.skidam.yetanotherauthmod.Utils;
 
-import javax.net.ssl.HttpsURLConnection;
 import java.io.IOException;
-import java.net.HttpURLConnection;
-import java.net.URL;
 
-import static pl.skidam.yetanotherauthmod.yaam.mojangAccountNamesCache;
+import static pl.skidam.yetanotherauthmod.yaam.mojangAccounts;
 
 @Mixin(value = ServerLoginNetworkHandler.class, priority = 2137)
 public abstract class ServerLoginNetworkHandlerMixin {
-
     @Shadow
     GameProfile profile;
-
     @Shadow
     ServerLoginNetworkHandler.State state;
+    @Shadow @Mutable @Final
+    public ClientConnection connection;
 
-    /**
-     * Checks whether the player has purchased an account.
-     * If so, server is presented as online, and continues as in normal-online mode.
-     * Otherwise, player is marked as ready to be accepted into the game.
-     *
-     * @param packet
-     * @param ci
-     */
     @Inject(
             method = "onHello(Lnet/minecraft/network/packet/c2s/login/LoginHelloC2SPacket;)V",
             at = @At(
                     value = "NEW",
                     target = "com/mojang/authlib/GameProfile",
-                    shift = At.Shift.AFTER,
-                    remap = false
+                    shift = At.Shift.AFTER
             ),
             cancellable = true
     )
-    private void checkPremium(LoginHelloC2SPacket packet, CallbackInfo ci) {
+    private void onHello(LoginHelloC2SPacket packet, CallbackInfo ci) {
         try {
-            String playerName = (new GameProfile(null, packet.name())).getName().toLowerCase();
-            // Checking account status from API
-            HttpsURLConnection httpsURLConnection = (HttpsURLConnection) new URL("https://api.mojang.com/users/profiles/minecraft/" + playerName).openConnection();
-            httpsURLConnection.setRequestMethod("GET");
-            httpsURLConnection.setConnectTimeout(5000);
-            httpsURLConnection.setReadTimeout(5000);
+            // It needs to be lowercase otherwise mojang api not work as expected
+            String playerName = packet.name().toLowerCase();
 
-            int response = httpsURLConnection.getResponseCode();
-            httpsURLConnection.disconnect();
-
-            if (response == HttpURLConnection.HTTP_OK) { // Player has a Mojang account
-                mojangAccountNamesCache.add(playerName); // Caches player name
-            } else { // Player doesn't have a Mojang account
+            if (Utils.hasPurchasedMinecraft(playerName)) {
+                mojangAccounts.add(playerName);
+            } else {
                 this.state = ServerLoginNetworkHandler.State.READY_TO_ACCEPT;
                 this.profile = new GameProfile(null, packet.name());
                 ci.cancel();
             }
+
         } catch (IOException e) {
             e.printStackTrace();
 
-            // Player probably doesn't have a Mojang account
-            this.state = ServerLoginNetworkHandler.State.READY_TO_ACCEPT;
-            this.profile = new GameProfile(null, packet.name());
-            ci.cancel();
+            // kick player on error
+            Text reason = Text.literal("Authentication error. Please contact server admin!").formatted(Formatting.RED).append("[" + e.getMessage() + "] More details in server log.").formatted(Formatting.RED);
+            connection.send(new LoginDisconnectS2CPacket(reason));
+            connection.disconnect(reason);
         }
     }
 }

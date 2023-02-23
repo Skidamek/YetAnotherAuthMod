@@ -6,7 +6,6 @@ import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.builder.RequiredArgumentBuilder;
 import com.mojang.brigadier.tree.RootCommandNode;
-import eu.pb4.polymer.common.impl.CommonImpl;
 import eu.pb4.polymer.networking.api.EarlyPlayNetworkHandler;
 import eu.pb4.polymer.common.api.PolymerCommonUtils;
 import io.netty.buffer.Unpooled;
@@ -25,12 +24,12 @@ import net.minecraft.util.Identifier;
 
 import java.util.function.Function;
 
-import static pl.skidam.yetanotherauthmod.yaam.mojangAccountNamesCache;
+import static pl.skidam.yetanotherauthmod.yaam.mojangAccounts;
 
 public class LimboHandler extends EarlyPlayNetworkHandler {
     private static final ArmorStandEntity FAKE_ENTITY = new ArmorStandEntity(EntityType.ARMOR_STAND, PolymerCommonUtils.getFakeWorld());
     private static final CommandDispatcher<LimboHandler> COMMANDS = new CommandDispatcher<>();
-    private boolean registered = false;
+    private boolean registered;
 
     public LimboHandler(Context context) {
         super(new Identifier(yaam.MOD_ID), context);
@@ -39,24 +38,22 @@ public class LimboHandler extends EarlyPlayNetworkHandler {
         String playerIP = Utils.extractContentInBrackets(this.getConnection().getAddress().toString());
 
         // If player is authenticated / has active session, join normal game
-        if (yaam.sessions.checkSession(playerName, playerIP, false) || yaam.sessions.checkSession(playerName, playerIP, true)) {
+        if (yaam.sessions.checkSession(playerName, playerIP)) {
             this.sendPacket(new GameMessageS2CPacket(Text.literal("Authenticated using login session!").formatted(Formatting.GREEN), false));
             this.continueJoining();
             return;
-        } else if (mojangAccountNamesCache.contains(playerName.toLowerCase())) {
-            this.sendPacket(new GameMessageS2CPacket(Text.literal("Authenticated using Mojang account!").formatted(Formatting.GREEN), false));
-            this.continueJoining();
-            return;
+        } else {
+            if (mojangAccounts.contains(playerName.toLowerCase())) {
+                this.sendPacket(new GameMessageS2CPacket(Text.literal("Authenticated using Mojang account!").formatted(Formatting.GREEN), false));
+                this.continueJoining();
+                return;
+            }
         }
 
+        registered = yaam.database.userExists(playerName);
+
         // Load into limbo
-        this.sendInitialGameJoin();
-        this.sendPacket(FAKE_ENTITY.createSpawnPacket());
-        this.sendPacket(new EntityTrackerUpdateS2CPacket(FAKE_ENTITY.getId(), FAKE_ENTITY.getDataTracker().getChangedEntries()));
-        this.sendPacket(new SetCameraEntityS2CPacket(FAKE_ENTITY));
-        this.sendPacket(new CustomPayloadS2CPacket(CustomPayloadS2CPacket.BRAND, (new PacketByteBuf(Unpooled.buffer())).writeString("limbo")));
-        this.sendPacket(new WorldTimeUpdateS2CPacket(0, 18000, false));
-        this.sendPacket(new CloseScreenS2CPacket(0));
+        sendToLimbo();
 
         this.sendPacket(new CommandTreeS2CPacket((RootCommandNode) COMMANDS.getRoot()));
 
@@ -69,6 +66,16 @@ public class LimboHandler extends EarlyPlayNetworkHandler {
         } else {
             sendChatMessage("Welcome " + username + "!", Formatting.GREEN);
         }
+    }
+
+    private void sendToLimbo() {
+        this.sendInitialGameJoin();
+        this.sendPacket(FAKE_ENTITY.createSpawnPacket());
+        this.sendPacket(new EntityTrackerUpdateS2CPacket(FAKE_ENTITY.getId(), FAKE_ENTITY.getDataTracker().getChangedEntries()));
+        this.sendPacket(new SetCameraEntityS2CPacket(FAKE_ENTITY));
+        this.sendPacket(new CustomPayloadS2CPacket(CustomPayloadS2CPacket.BRAND, (new PacketByteBuf(Unpooled.buffer())).writeString("limbo")));
+        this.sendPacket(new WorldTimeUpdateS2CPacket(0, 18000, false));
+        this.sendPacket(new CloseScreenS2CPacket(0));
     }
 
     @Override
@@ -148,61 +155,63 @@ public class LimboHandler extends EarlyPlayNetworkHandler {
         String playerName = this.getPlayer().getGameProfile().getName();
         String playerIP = Utils.extractContentInBrackets(this.getConnection().getAddress().toString());
 
-        if (!yaam.database.userExists(playerName)) {
-            COMMANDS.register(literal("register")
+        if (registered) {
+
+                COMMANDS.register(literal("register")
+                        .then(argument("password", StringArgumentType.word())
+                                .then(argument("confirm_password", StringArgumentType.word())
+                                        .executes(x -> {
+                                            String password = x.getArgument("password", String.class);
+                                            String confirm = x.getArgument("confirm_password", String.class);
+                                            if (password.equals(confirm) && !password.equals("")) {
+
+                                                // add to login database and create session
+                                                yaam.database.addUser(playerName, password);
+                                                yaam.sessions.createSession(playerName, playerIP);
+
+                                                this.disconnect(
+                                                        Text.literal("Successfully registered!\n\n").formatted(Formatting.GREEN)
+                                                                .append(Text.literal("Rejoin server to play!\n").formatted(Formatting.GREEN))
+                                                );
+                                            } else {
+                                                sendChatMessage("Passwords don't match!", Formatting.RED);
+                                            }
+                                            return 0;
+                                        })
+                                )
+                        )
+                );
+
+        } else {
+
+            COMMANDS.register(literal("login")
                     .then(argument("password", StringArgumentType.word())
-                            .then(argument("confirm_password", StringArgumentType.word())
-                                    .executes(x -> {
-                                        String password = x.getArgument("password", String.class);
-                                        String confirm = x.getArgument("confirm_password", String.class);
-                                        if (password.equals(confirm) && !password.equals("")) {
+                            .executes(x -> {
+                                String userInput = x.getArgument("password", String.class);
+                                if (yaam.database.checkLogin(playerName, userInput)) {
 
-                                            // add to login database and create session
-                                            yaam.database.addUser(playerName, password);
-                                            yaam.sessions.createSession(playerName, playerIP, false);
+                                    // create session
+                                    yaam.sessions.createSession(playerName, playerIP);
 
-                                            this.disconnect(
-                                                    Text.literal("Successfully registered!\n\n").formatted(Formatting.GREEN)
+                                    this.disconnect(
+                                            Text.literal("Successfully created login session!\n\n").formatted(Formatting.GREEN)
                                                     .append(Text.literal("Rejoin server to play!\n").formatted(Formatting.GREEN))
-                                            );
-                                        } else {
-                                            sendChatMessage("Passwords don't match!", Formatting.RED);
-                                        }
-                                        return 0;
-                                    })
-                            )
+                                    );
+
+                                } else {
+                                    loginTries++;
+                                    if (loginTries >= 3) {
+                                        this.disconnect(
+                                                Text.literal("Too many login attempts!\n\n").formatted(Formatting.RED)
+                                                        .append(Text.literal("Try again latter!\n").formatted(Formatting.RED))
+                                        );
+                                    }
+                                    sendChatMessage("Incorrect password, attempt " + loginTries + "/3", Formatting.RED);
+                                }
+                                return 0;
+                            })
                     )
             );
         }
-
-
-        COMMANDS.register(literal("login")
-            .then(argument("password", StringArgumentType.word())
-                .executes(x -> {
-                    String userInput = x.getArgument("password", String.class);
-                    if (yaam.database.checkLogin(playerName, userInput)) {
-
-                        // create session
-                        yaam.sessions.createSession(playerName, playerIP, false);
-
-                        this.disconnect(
-                                Text.literal("Successfully created login session!\n\n").formatted(Formatting.GREEN)
-                                .append(Text.literal("Rejoin server to play!\n").formatted(Formatting.GREEN))
-                        );
-
-                    } else {
-                        loginTries++;
-                        if (loginTries >= 3) {
-                            this.disconnect(
-                                    Text.literal("Too many login attempts!\n\n").formatted(Formatting.RED)
-                                    .append(Text.literal("Try again latter!\n").formatted(Formatting.RED))
-                            );
-                        }
-                        sendChatMessage("Incorrect password, attempt " + loginTries + "/3", Formatting.RED);
-                    }
-                    return 0;
-                })
-            )
-        );
     }
 }

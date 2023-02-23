@@ -5,7 +5,10 @@ import net.fabricmc.api.ModInitializer;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import pl.skidam.yetanotherauthmod.data.LoginDatabase;
+import pl.skidam.yetanotherauthmod.data.SessionDatabase;
 
+import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -17,15 +20,11 @@ public class yaam implements ModInitializer {
 	public static final Logger LOGGER = LoggerFactory.getLogger(MOD_ID);
 	public static LoginDatabase database;
 	public static SessionDatabase sessions;
-
-	/**
-	 * HashSet of player names that have Mojang accounts.
-	 * If player is saved in here, they will be treated as online-mode ones.
-	 */
-	public static final HashSet<String> mojangAccountNamesCache = new HashSet<>();
+	public static final HashSet<String> mojangAccounts = new HashSet<>();
 
 	@Override
 	public void onInitialize() {
+
 		Path databasePath = Path.of("./yaam/database.json");
 		if (!Files.exists(databasePath)) {
 			try {
@@ -48,6 +47,7 @@ public class yaam implements ModInitializer {
 
 		sessions = new SessionDatabase(sessionsPath);
 		database = new LoginDatabase(databasePath);
+
 
 		EarlyPlayNetworkHandler.register(LimboHandler::new);
 

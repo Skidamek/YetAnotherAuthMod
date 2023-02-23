@@ -1,5 +1,8 @@
 package pl.skidam.yetanotherauthmod;
 
+import javax.net.ssl.HttpsURLConnection;
+import java.io.IOException;
+import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -30,4 +33,16 @@ public class Utils {
         return "";
     }
 
+    public static boolean hasPurchasedMinecraft(String playerName) throws IOException {
+        HttpsURLConnection httpsURLConnection = (HttpsURLConnection) new URL("https://api.mojang.com/users/profiles/minecraft/" + playerName).openConnection();
+        httpsURLConnection.setRequestMethod("GET");
+        httpsURLConnection.setConnectTimeout(5000);
+        httpsURLConnection.setReadTimeout(5000);
+
+        int response = httpsURLConnection.getResponseCode();
+        httpsURLConnection.disconnect();
+
+        // If server returns 200, player under this username has a Mojang account
+        return response == 200;
+    }
 }
