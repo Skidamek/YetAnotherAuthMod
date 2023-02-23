@@ -48,16 +48,16 @@ public abstract class ServerLoginNetworkHandlerMixin {
 
             if (!mojangAccounts.contains(playerName.toLowerCase())) {
                 if (Utils.hasPurchasedMinecraft(playerName.toLowerCase())) {
-                    LOGGER.info("Player " + playerName + " is premium player.");
+                    LOGGER.info(playerName + " is premium player.");
                     mojangAccounts.add(playerName.toLowerCase());
                 } else {
-                    LOGGER.info("Player " + playerName + " is non premium player.");
+                    LOGGER.info(playerName + " is non premium player.");
                     this.state = ServerLoginNetworkHandler.State.READY_TO_ACCEPT;
                     this.profile = new GameProfile(null, packet.name());
                     ci.cancel();
                 }
             } else {
-                LOGGER.info("Player " + playerName + " is premium player.");
+                LOGGER.info(playerName + " is premium player.");
             }
 
         } catch (IOException e) {
