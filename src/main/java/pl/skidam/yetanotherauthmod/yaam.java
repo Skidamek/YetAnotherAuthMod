@@ -8,7 +8,6 @@ import org.slf4j.LoggerFactory;
 import pl.skidam.yetanotherauthmod.data.LoginDatabase;
 import pl.skidam.yetanotherauthmod.data.SessionDatabase;
 
-import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;

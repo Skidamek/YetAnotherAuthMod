@@ -3,7 +3,7 @@
 	"id": "yetanotherauthmod",
 	"version": "${version}",
 	"name": "YetAnotherAuthMod",
-	"description": "This is an example description! Tell everyone what your mod is about!",
+	"description": "Simple authentication mod for Fabric",
 	"authors": [
 		"Skidam"
 	],
@@ -11,7 +11,7 @@
 		"homepage": "https://fabricmc.net/",
 		"sources": "https://github.com/FabricMC/fabric-example-mod"
 	},
-	"license": "CC0-1.0",
+	"license": "LGPL-3.0-or-later",
 	"icon": "assets/yetanotherauthmod/icon.png",
 	"environment": "*",
 	"entrypoints": {
@@ -28,8 +28,5 @@
 		"minecraft": "~1.19.3",
 		"java": ">=17",
 		"fabric-api": "*"
-	},
-	"suggests": {
-		"another-mod": "*"
 	}
 }

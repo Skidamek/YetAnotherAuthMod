@@ -29,31 +29,39 @@ import static pl.skidam.yetanotherauthmod.yaam.mojangAccounts;
 public class LimboHandler extends EarlyPlayNetworkHandler {
     private static final ArmorStandEntity FAKE_ENTITY = new ArmorStandEntity(EntityType.ARMOR_STAND, PolymerCommonUtils.getFakeWorld());
     private static final CommandDispatcher<LimboHandler> COMMANDS = new CommandDispatcher<>();
-    private boolean registered;
+    private boolean playerAlreadyRegistered;
 
+    @SuppressWarnings("unchecked")
     public LimboHandler(Context context) {
         super(new Identifier(yaam.MOD_ID), context);
 
         String playerName = this.getPlayer().getGameProfile().getName();
         String playerIP = Utils.extractContentInBrackets(this.getConnection().getAddress().toString());
 
-        // If player is authenticated / has active session, join normal game
+        // Check if player has active session if so join normal game
         if (yaam.sessions.checkSession(playerName, playerIP)) {
             this.sendPacket(new GameMessageS2CPacket(Text.literal("Authenticated using login session!").formatted(Formatting.GREEN), false));
             this.continueJoining();
             return;
-        } else {
-            if (mojangAccounts.contains(playerName.toLowerCase())) {
-                this.sendPacket(new GameMessageS2CPacket(Text.literal("Authenticated using Mojang account!").formatted(Formatting.GREEN), false));
-                this.continueJoining();
-                return;
-            }
         }
 
-        registered = yaam.database.userExists(playerName);
+        // Check if player is authenticated using Mojang account if so join normal game
+        if (mojangAccounts.contains(playerName.toLowerCase())) {
+            this.sendPacket(new GameMessageS2CPacket(Text.literal("Authenticated using Mojang account!").formatted(Formatting.GREEN), false));
+            this.continueJoining();
+            return;
+        }
+
+        playerAlreadyRegistered = yaam.database.userExists(playerName);
 
         // Load into limbo
-        sendToLimbo();
+        this.sendInitialGameJoin();
+        this.sendPacket(FAKE_ENTITY.createSpawnPacket());
+        this.sendPacket(new EntityTrackerUpdateS2CPacket(FAKE_ENTITY.getId(), FAKE_ENTITY.getDataTracker().getChangedEntries()));
+        this.sendPacket(new SetCameraEntityS2CPacket(FAKE_ENTITY));
+        this.sendPacket(new CustomPayloadS2CPacket(CustomPayloadS2CPacket.BRAND, (new PacketByteBuf(Unpooled.buffer())).writeString("limbo")));
+        this.sendPacket(new WorldTimeUpdateS2CPacket(0, 18000, false));
+        this.sendPacket(new CloseScreenS2CPacket(0));
 
         this.sendPacket(new CommandTreeS2CPacket((RootCommandNode) COMMANDS.getRoot()));
 
@@ -66,16 +74,6 @@ public class LimboHandler extends EarlyPlayNetworkHandler {
         } else {
             sendChatMessage("Welcome " + username + "!", Formatting.GREEN);
         }
-    }
-
-    private void sendToLimbo() {
-        this.sendInitialGameJoin();
-        this.sendPacket(FAKE_ENTITY.createSpawnPacket());
-        this.sendPacket(new EntityTrackerUpdateS2CPacket(FAKE_ENTITY.getId(), FAKE_ENTITY.getDataTracker().getChangedEntries()));
-        this.sendPacket(new SetCameraEntityS2CPacket(FAKE_ENTITY));
-        this.sendPacket(new CustomPayloadS2CPacket(CustomPayloadS2CPacket.BRAND, (new PacketByteBuf(Unpooled.buffer())).writeString("limbo")));
-        this.sendPacket(new WorldTimeUpdateS2CPacket(0, 18000, false));
-        this.sendPacket(new CloseScreenS2CPacket(0));
     }
 
     @Override
@@ -99,7 +97,7 @@ public class LimboHandler extends EarlyPlayNetworkHandler {
             sendActionBarMessage(String.valueOf(seconds), Formatting.RED);
 
             if (loginTime % 200 == 0) {
-                if (registered) {
+                if (playerAlreadyRegistered) {
                     sendChatMessage("Login using /login <password>", Formatting.GREEN);
                 } else {
                     sendChatMessage("Register using /register <password> <confirm_password>", Formatting.GREEN);
@@ -155,7 +153,7 @@ public class LimboHandler extends EarlyPlayNetworkHandler {
         String playerName = this.getPlayer().getGameProfile().getName();
         String playerIP = Utils.extractContentInBrackets(this.getConnection().getAddress().toString());
 
-        if (registered) {
+        if (!playerAlreadyRegistered) {
 
                 COMMANDS.register(literal("register")
                         .then(argument("password", StringArgumentType.word())
@@ -170,8 +168,8 @@ public class LimboHandler extends EarlyPlayNetworkHandler {
                                                 yaam.sessions.createSession(playerName, playerIP);
 
                                                 this.disconnect(
-                                                        Text.literal("Successfully registered!\n\n").formatted(Formatting.GREEN)
-                                                                .append(Text.literal("Rejoin server to play!\n").formatted(Formatting.GREEN))
+                                                        Text.literal("Successfully registered!\n").formatted(Formatting.GREEN)
+                                                                .append(Text.literal("Rejoin server to play!").formatted(Formatting.GREEN))
                                                 );
                                             } else {
                                                 sendChatMessage("Passwords don't match!", Formatting.RED);
@@ -194,16 +192,16 @@ public class LimboHandler extends EarlyPlayNetworkHandler {
                                     yaam.sessions.createSession(playerName, playerIP);
 
                                     this.disconnect(
-                                            Text.literal("Successfully created login session!\n\n").formatted(Formatting.GREEN)
-                                                    .append(Text.literal("Rejoin server to play!\n").formatted(Formatting.GREEN))
+                                            Text.literal("Successfully created login session!\n").formatted(Formatting.GREEN)
+                                                    .append(Text.literal("Rejoin server to play!").formatted(Formatting.GREEN))
                                     );
 
                                 } else {
                                     loginTries++;
                                     if (loginTries >= 3) {
                                         this.disconnect(
-                                                Text.literal("Too many login attempts!\n\n").formatted(Formatting.RED)
-                                                        .append(Text.literal("Try again latter!\n").formatted(Formatting.RED))
+                                                Text.literal("Too many login attempts!\n").formatted(Formatting.RED)
+                                                        .append(Text.literal("Try again latter!").formatted(Formatting.RED))
                                         );
                                     }
                                     sendChatMessage("Incorrect password, attempt " + loginTries + "/3", Formatting.RED);

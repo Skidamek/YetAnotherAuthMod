@@ -18,6 +18,7 @@ import pl.skidam.yetanotherauthmod.Utils;
 
 import java.io.IOException;
 
+import static pl.skidam.yetanotherauthmod.yaam.LOGGER;
 import static pl.skidam.yetanotherauthmod.yaam.mojangAccounts;
 
 @Mixin(value = ServerLoginNetworkHandler.class, priority = 2137)
@@ -34,30 +35,36 @@ public abstract class ServerLoginNetworkHandlerMixin {
             at = @At(
                     value = "NEW",
                     target = "com/mojang/authlib/GameProfile",
-                    shift = At.Shift.AFTER
+                    shift = At.Shift.AFTER,
+                    remap = false
             ),
             cancellable = true
     )
     private void onHello(LoginHelloC2SPacket packet, CallbackInfo ci) {
         try {
-            // It needs to be lowercase otherwise mojang api not work as expected
-            String playerName = packet.name().toLowerCase();
 
-            if (!mojangAccounts.contains(playerName)) {
-                if (Utils.hasPurchasedMinecraft(playerName)) {
-                    mojangAccounts.add(playerName);
+            // It needs to be lowercase otherwise mojang api not work as expected
+            String playerName = packet.name();
+
+            if (!mojangAccounts.contains(playerName.toLowerCase())) {
+                if (Utils.hasPurchasedMinecraft(playerName.toLowerCase())) {
+                    LOGGER.info("Player " + playerName + " is premium player.");
+                    mojangAccounts.add(playerName.toLowerCase());
                 } else {
+                    LOGGER.info("Player " + playerName + " is non premium player.");
                     this.state = ServerLoginNetworkHandler.State.READY_TO_ACCEPT;
                     this.profile = new GameProfile(null, packet.name());
                     ci.cancel();
                 }
+            } else {
+                LOGGER.info("Player " + playerName + " is premium player.");
             }
 
         } catch (IOException e) {
             e.printStackTrace();
 
             // kick player on error
-            Text reason = Text.literal("Authentication error. Please contact server admin!").formatted(Formatting.RED).append("[" + e.getMessage() + "] More details in server log.").formatted(Formatting.RED);
+            Text reason = Text.literal("Authentication error. Please contact server admin!\n").formatted(Formatting.RED).append("[" + e.getMessage() + "] More details in server log.").formatted(Formatting.RED);
             connection.send(new LoginDisconnectS2CPacket(reason));
             connection.disconnect(reason);
         }
