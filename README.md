@@ -18,4 +18,4 @@ And that's it
 
 # Credits
 
-Thanks to Patbox, creator of [Polymer](https://modrinth.com/mod/polymer) great server-side library, we are able to easily create the limbo world without the need for a second server or proxy
+Thanks to Patbox, creator of [Polymer](https://modrinth.com/mod/polymer) great server-side library, we are able to easily create the limbo world without the need for a second server or proxy.
