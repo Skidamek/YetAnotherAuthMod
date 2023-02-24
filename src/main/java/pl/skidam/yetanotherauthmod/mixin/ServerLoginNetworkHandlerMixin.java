@@ -67,10 +67,10 @@ public abstract class ServerLoginNetworkHandlerMixin {
                     LOGGER.info("Authenticating " + playerName + " as premium player.");
                     onlineUUIDs.add(purchasedUUID);
 
-                } else {
-                    LOGGER.info("Authenticating " + playerName + " as non-premium player.");
-                    this.state = ServerLoginNetworkHandler.State.READY_TO_ACCEPT;
-                    this.profile = new GameProfile(null, playerName);
+                } else { // player using premium username without access to this premium account
+                    Text reason = Text.literal("This username is taken! Change your username to play!").formatted(Formatting.RED);
+                    connection.send(new LoginDisconnectS2CPacket(reason));
+                    connection.disconnect(reason);
                     ci.cancel();
                 }
             }
@@ -81,6 +81,7 @@ public abstract class ServerLoginNetworkHandlerMixin {
             Text reason = Text.literal("Authentication error. Please contact server admin!\n").formatted(Formatting.RED).append("[" + e.getMessage() + "] More details in server log.").formatted(Formatting.RED);
             connection.send(new LoginDisconnectS2CPacket(reason));
             connection.disconnect(reason);
+            ci.cancel();
         }
     }
 }
