@@ -29,7 +29,8 @@ import static pl.skidam.yetanotherauthmod.yaam.onlineUUIDs;
 public class LimboHandler extends EarlyPlayNetworkHandler {
     private static final ArmorStandEntity FAKE_ENTITY = new ArmorStandEntity(EntityType.ARMOR_STAND, PolymerCommonUtils.getFakeWorld());
     private static final CommandDispatcher<LimboHandler> COMMANDS = new CommandDispatcher<>();
-    private static boolean playerAlreadyRegistered = false;
+    private static Text cyclingText;
+    private static boolean loadedToLimbo;
 
     @SuppressWarnings("unchecked")
     public LimboHandler(Context context) {
@@ -53,9 +54,6 @@ public class LimboHandler extends EarlyPlayNetworkHandler {
             return;
         }
 
-
-        playerAlreadyRegistered = yaam.database.userExists(playerName);
-
         // Load into limbo
         this.sendInitialGameJoin();
         this.sendPacket(FAKE_ENTITY.createSpawnPacket());
@@ -65,17 +63,29 @@ public class LimboHandler extends EarlyPlayNetworkHandler {
         this.sendPacket(new WorldTimeUpdateS2CPacket(0, 18000, false));
         this.sendPacket(new CloseScreenS2CPacket(0));
 
-        this.sendPacket(new CommandTreeS2CPacket((RootCommandNode) COMMANDS.getRoot()));
-
         String username = String.valueOf(this.getPlayer().getEntityName());
+
         if (yaam.database.userExists(username)) {
+
             sendChatMessage("Welcome again " + username + "!", Formatting.GREEN);
+            registerCommands(true);
+
+            cyclingText = Text.literal("Login using /login <password>").formatted(Formatting.GREEN);
+
             if (!yaam.sessions.activeSession(username)) {
                 sendChatMessage("Your login session got expired!", Formatting.RED);
+            } else {
+                sendChatMessage("Looks like you are logging from different IP address, login again to activate new session!", Formatting.GREEN);
             }
         } else {
             sendChatMessage("Welcome " + username + "!", Formatting.GREEN);
+            registerCommands(false);
+
+            cyclingText = Text.literal("Register using /register <password> <confirm_password>").formatted(Formatting.GREEN);
         }
+
+        loadedToLimbo = true;
+        this.sendPacket(new CommandTreeS2CPacket((RootCommandNode) COMMANDS.getRoot()));
     }
 
     @Override
@@ -87,8 +97,12 @@ public class LimboHandler extends EarlyPlayNetworkHandler {
         }
     }
 
-    private int loginTime = 60 * 20 + 5; // 60 seconds (+ 5 ticks)
+    private int loginTime = 60 * 20; // 60 seconds
     protected void onTick() {
+        if (!loadedToLimbo) {
+            return;
+        }
+
         if (loginTime == 0) {
             this.disconnect(Text.literal("Login timeout!").formatted(Formatting.RED));
             return;
@@ -99,11 +113,8 @@ public class LimboHandler extends EarlyPlayNetworkHandler {
             sendActionBarMessage(String.valueOf(seconds), Formatting.RED);
 
             if (loginTime % 200 == 0) {
-                if (playerAlreadyRegistered) {
-                    sendChatMessage("Login using /login <password>", Formatting.GREEN);
-                } else {
-                    sendChatMessage("Register using /register <password> <confirm_password>", Formatting.GREEN);
-                }
+                // send chat message
+                this.sendPacket(new GameMessageS2CPacket(cyclingText, false));
             }
         }
 
@@ -141,9 +152,9 @@ public class LimboHandler extends EarlyPlayNetworkHandler {
         return RequiredArgumentBuilder.argument(name, argumentType);
     }
 
-    private int loginTries = 0;
 
-    {
+    static {
+        loadedToLimbo = false;
         FAKE_ENTITY.setPos(0, 64, 0);
         FAKE_ENTITY.setNoGravity(true);
         FAKE_ENTITY.setInvisible(true);
@@ -151,38 +162,16 @@ public class LimboHandler extends EarlyPlayNetworkHandler {
         FAKE_ENTITY.writeCustomDataToNbt(nbt);
         nbt.putBoolean("Marker", true);
         FAKE_ENTITY.readCustomDataFromNbt(nbt);
+    }
 
+
+    private int loginTries = 0;
+
+    private void registerCommands(boolean playerAlreadyRegistered) {
         String playerName = this.getPlayer().getGameProfile().getName();
         String playerIP = Utils.extractContentInBrackets(this.getConnection().getAddress().toString());
 
-        if (!playerAlreadyRegistered) {
-
-                COMMANDS.register(literal("register")
-                        .then(argument("password", StringArgumentType.word())
-                                .then(argument("confirm_password", StringArgumentType.word())
-                                        .executes(x -> {
-                                            String password = x.getArgument("password", String.class);
-                                            String confirm = x.getArgument("confirm_password", String.class);
-                                            if (password.equals(confirm) && !password.equals("")) {
-
-                                                // add to login database and create session
-                                                yaam.database.addUser(playerName, password);
-                                                yaam.sessions.createSession(playerName, playerIP);
-
-                                                this.disconnect(
-                                                        Text.literal("Successfully registered!\n").formatted(Formatting.GREEN)
-                                                                .append(Text.literal("Rejoin server to play!").formatted(Formatting.GREEN))
-                                                );
-                                            } else {
-                                                sendChatMessage("Passwords don't match!", Formatting.RED);
-                                            }
-                                            return 0;
-                                        })
-                                )
-                        )
-                );
-
-        } else {
+        if (playerAlreadyRegistered) {
 
             COMMANDS.register(literal("login")
                     .then(argument("password", StringArgumentType.word())
@@ -210,6 +199,34 @@ public class LimboHandler extends EarlyPlayNetworkHandler {
                                 }
                                 return 0;
                             })
+                    )
+            );
+
+
+        } else {
+
+            COMMANDS.register(literal("register")
+                    .then(argument("password", StringArgumentType.word())
+                            .then(argument("confirm_password", StringArgumentType.word())
+                                    .executes(x -> {
+                                        String password = x.getArgument("password", String.class);
+                                        String confirm = x.getArgument("confirm_password", String.class);
+                                        if (password.equals(confirm) && !password.equals("")) {
+
+                                            // add to login database and create session
+                                            yaam.database.addUser(playerName, password);
+                                            yaam.sessions.createSession(playerName, playerIP);
+
+                                            this.disconnect(
+                                                    Text.literal("Successfully registered!\n").formatted(Formatting.GREEN)
+                                                            .append(Text.literal("Rejoin server to play!").formatted(Formatting.GREEN))
+                                            );
+                                        } else {
+                                            sendChatMessage("Passwords don't match!", Formatting.RED);
+                                        }
+                                        return 0;
+                                    })
+                            )
                     )
             );
         }

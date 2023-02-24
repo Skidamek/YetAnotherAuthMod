@@ -70,6 +70,9 @@ public abstract class ServerLoginNetworkHandlerMixin {
                     // original mojang auth... (look at the source of the mixin)
 
                 } else { // player using premium username without access to this premium account
+
+                    // TODO add all premium players to login database, and if this player is not in database, let this offline player join
+
                     Text reason = Text.literal("This username is taken!\n").formatted(Formatting.RED).append("Please buy original copy of the game or change your username to play!").formatted(Formatting.RED);
                     connection.send(new LoginDisconnectS2CPacket(reason));
                     connection.disconnect(reason);
