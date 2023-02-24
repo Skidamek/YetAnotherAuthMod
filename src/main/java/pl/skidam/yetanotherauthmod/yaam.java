@@ -19,7 +19,7 @@ public class yaam implements ModInitializer {
 	public static final Logger LOGGER = LoggerFactory.getLogger(MOD_ID);
 	public static LoginDatabase database;
 	public static SessionDatabase sessions;
-	public static final HashSet<String> mojangAccounts = new HashSet<>();
+	public static final HashSet<String> onlineUUIDs = new HashSet<>();
 
 	@Override
 	public void onInitialize() {

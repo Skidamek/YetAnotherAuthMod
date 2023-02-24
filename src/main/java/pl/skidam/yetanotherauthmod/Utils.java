@@ -1,11 +1,19 @@
 package pl.skidam.yetanotherauthmod;
 
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
+
 import javax.net.ssl.HttpsURLConnection;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.Scanner;
+import java.util.UUID;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -39,16 +47,25 @@ public class Utils {
         return "";
     }
 
-    public static boolean hasPurchasedMinecraft(String playerName) throws IOException {
-        HttpsURLConnection httpsURLConnection = (HttpsURLConnection) new URL("https://api.mojang.com/users/profiles/minecraft/" + playerName).openConnection();
-        httpsURLConnection.setRequestMethod("GET");
-        httpsURLConnection.setConnectTimeout(5000);
-        httpsURLConnection.setReadTimeout(5000);
+    public static String hasPurchasedMinecraft(String playerName) throws IOException {
+        HttpsURLConnection connection = (HttpsURLConnection) new URL("https://api.mojang.com/users/profiles/minecraft/" + playerName).openConnection();
+        connection.setRequestMethod("GET");
+        connection.setConnectTimeout(5000);
+        connection.setReadTimeout(5000);
 
-        int response = httpsURLConnection.getResponseCode();
-        httpsURLConnection.disconnect();
+        int response = connection.getResponseCode();
 
         // If server returns 200, player under this username has a Mojang account
-        return response == 200;
+        if (response == 200) {
+            // return id of player
+            try (InputStream inputStream = connection.getInputStream()) {
+                JsonElement jsonElement = JsonParser.parseReader(new InputStreamReader(inputStream));
+                JsonObject jsonObject = jsonElement.getAsJsonObject();
+                return jsonObject.get("id").getAsString();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+        return null;
     }
 }

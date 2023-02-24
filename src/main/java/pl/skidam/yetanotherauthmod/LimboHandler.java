@@ -24,7 +24,8 @@ import net.minecraft.util.Identifier;
 
 import java.util.function.Function;
 
-import static pl.skidam.yetanotherauthmod.yaam.mojangAccounts;
+import static pl.skidam.yetanotherauthmod.yaam.LOGGER;
+import static pl.skidam.yetanotherauthmod.yaam.onlineUUIDs;
 
 public class LimboHandler extends EarlyPlayNetworkHandler {
     private static final ArmorStandEntity FAKE_ENTITY = new ArmorStandEntity(EntityType.ARMOR_STAND, PolymerCommonUtils.getFakeWorld());
@@ -37,6 +38,14 @@ public class LimboHandler extends EarlyPlayNetworkHandler {
 
         String playerName = this.getPlayer().getGameProfile().getName();
         String playerIP = Utils.extractContentInBrackets(this.getConnection().getAddress().toString());
+        String playerUUID = this.getPlayer().getUuidAsString().replace("-", "").toLowerCase();
+
+        // Check if player is authenticated using Mojang account if so join normal game
+        if (onlineUUIDs.contains(playerUUID)) {
+            this.sendPacket(new GameMessageS2CPacket(Text.literal("Authenticated using Mojang account!").formatted(Formatting.GREEN), false));
+            this.continueJoining();
+            return;
+        }
 
         // Check if player has active session if so join normal game
         if (yaam.sessions.checkSession(playerName, playerIP)) {
@@ -45,12 +54,6 @@ public class LimboHandler extends EarlyPlayNetworkHandler {
             return;
         }
 
-        // Check if player is authenticated using Mojang account if so join normal game
-        if (mojangAccounts.contains(playerName.toLowerCase())) {
-            this.sendPacket(new GameMessageS2CPacket(Text.literal("Authenticated using Mojang account!").formatted(Formatting.GREEN), false));
-            this.continueJoining();
-            return;
-        }
 
         playerAlreadyRegistered = yaam.database.userExists(playerName);
 

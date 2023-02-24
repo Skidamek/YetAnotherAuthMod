@@ -19,7 +19,7 @@ import pl.skidam.yetanotherauthmod.Utils;
 import java.io.IOException;
 
 import static pl.skidam.yetanotherauthmod.yaam.LOGGER;
-import static pl.skidam.yetanotherauthmod.yaam.mojangAccounts;
+import static pl.skidam.yetanotherauthmod.yaam.onlineUUIDs;
 
 @Mixin(value = ServerLoginNetworkHandler.class, priority = 2137)
 public abstract class ServerLoginNetworkHandlerMixin {
@@ -42,24 +42,38 @@ public abstract class ServerLoginNetworkHandlerMixin {
     )
     private void onHello(LoginHelloC2SPacket packet, CallbackInfo ci) {
         try {
-
-            // It needs to be lowercase otherwise mojang api not work as expected
             String playerName = packet.name();
+            String playerUUID = packet.profileId().isPresent() ? packet.profileId().get().toString().replace("-", "").toLowerCase() : null;
 
-            if (!mojangAccounts.contains(playerName.toLowerCase())) {
-                if (Utils.hasPurchasedMinecraft(playerName.toLowerCase())) {
-                    LOGGER.info("Authenticating " + playerName + " as premium player.");
-                    mojangAccounts.add(playerName.toLowerCase());
-                } else {
-                    LOGGER.info("Authenticating " + playerName + " as non premium player.");
+            if (playerUUID == null) {
+                LOGGER.info("Authenticating " + playerName + " as non-premium player.");
+                this.state = ServerLoginNetworkHandler.State.READY_TO_ACCEPT;
+                this.profile = new GameProfile(null, playerName);
+                ci.cancel();
+
+            } else if (onlineUUIDs.contains(playerUUID)) {
+                LOGGER.info("Authenticating " + playerName + " as premium player.");
+
+            } else {
+                String purchasedUUID = Utils.hasPurchasedMinecraft(playerName);
+
+                if (purchasedUUID == null) {
+                    LOGGER.info("Authenticating " + playerName + " as non-premium player.");
                     this.state = ServerLoginNetworkHandler.State.READY_TO_ACCEPT;
-                    this.profile = new GameProfile(null, packet.name());
+                    this.profile = new GameProfile(null, playerName);
+                    ci.cancel();
+
+                } else if (purchasedUUID.equals(playerUUID)) {
+                    LOGGER.info("Authenticating " + playerName + " as premium player.");
+                    onlineUUIDs.add(purchasedUUID);
+
+                } else {
+                    LOGGER.info("Authenticating " + playerName + " as non-premium player.");
+                    this.state = ServerLoginNetworkHandler.State.READY_TO_ACCEPT;
+                    this.profile = new GameProfile(null, playerName);
                     ci.cancel();
                 }
-            } else {
-                LOGGER.info("Authenticating " + playerName + " as premium player.");
             }
-
         } catch (IOException e) {
             e.printStackTrace();
 
