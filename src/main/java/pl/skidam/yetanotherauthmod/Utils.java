@@ -9,11 +9,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.URL;
-import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.util.Scanner;
-import java.util.UUID;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -57,7 +54,7 @@ public class Utils {
 
         // If server returns 200, player under this username has a Mojang account
         if (response == 200) {
-            // return id of player
+            // return UUID of player
             try (InputStream inputStream = connection.getInputStream()) {
                 JsonElement jsonElement = JsonParser.parseReader(new InputStreamReader(inputStream));
                 JsonObject jsonObject = jsonElement.getAsJsonObject();

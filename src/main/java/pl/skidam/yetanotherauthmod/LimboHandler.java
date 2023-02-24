@@ -24,13 +24,12 @@ import net.minecraft.util.Identifier;
 
 import java.util.function.Function;
 
-import static pl.skidam.yetanotherauthmod.yaam.LOGGER;
 import static pl.skidam.yetanotherauthmod.yaam.onlineUUIDs;
 
 public class LimboHandler extends EarlyPlayNetworkHandler {
     private static final ArmorStandEntity FAKE_ENTITY = new ArmorStandEntity(EntityType.ARMOR_STAND, PolymerCommonUtils.getFakeWorld());
     private static final CommandDispatcher<LimboHandler> COMMANDS = new CommandDispatcher<>();
-    private boolean playerAlreadyRegistered;
+    private static boolean playerAlreadyRegistered = false;
 
     @SuppressWarnings("unchecked")
     public LimboHandler(Context context) {

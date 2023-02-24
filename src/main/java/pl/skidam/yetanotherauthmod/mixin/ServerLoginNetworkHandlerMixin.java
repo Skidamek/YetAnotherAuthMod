@@ -53,6 +53,7 @@ public abstract class ServerLoginNetworkHandlerMixin {
 
             } else if (onlineUUIDs.contains(playerUUID)) {
                 LOGGER.info("Authenticating " + playerName + " as premium player.");
+                // original mojang auth... (look at the source of the mixin)
 
             } else {
                 String purchasedUUID = Utils.hasPurchasedMinecraft(playerName);
@@ -66,9 +67,10 @@ public abstract class ServerLoginNetworkHandlerMixin {
                 } else if (purchasedUUID.equals(playerUUID)) {
                     LOGGER.info("Authenticating " + playerName + " as premium player.");
                     onlineUUIDs.add(purchasedUUID);
+                    // original mojang auth... (look at the source of the mixin)
 
                 } else { // player using premium username without access to this premium account
-                    Text reason = Text.literal("This username is taken! Change your username to play!").formatted(Formatting.RED);
+                    Text reason = Text.literal("This username is taken!\n").formatted(Formatting.RED).append("Please buy original copy of the game or change your username to play!").formatted(Formatting.RED);
                     connection.send(new LoginDisconnectS2CPacket(reason));
                     connection.disconnect(reason);
                     ci.cancel();
