@@ -10,7 +10,6 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.URL;
 import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -32,13 +31,29 @@ public class Utils {
         return null;
     }
 
-    public static String extractContentInBrackets(String input) {
-        String regex = "\\[(.*?)\\]";
-        Pattern pattern = Pattern.compile(regex);
-        Matcher matcher = pattern.matcher(input);
+    public static String formatIP(String ip) {
 
-        if (matcher.find()) {
-            return matcher.group(1);
+        // calculate how many in ip there are :
+        int count = 0;
+        for (int i = 0; i < ip.length(); i++) {
+            if (ip.charAt(i) == ':') {
+                count++;
+            } else if (count > 2) {
+                break;
+            }
+        }
+
+        if (count > 2) {
+            String regex = "\\[(.*?)\\]";
+            Pattern pattern = Pattern.compile(regex);
+            Matcher matcher = pattern.matcher(ip);
+
+            if (matcher.find()) {
+                return matcher.group(1).replace("/", "");
+            }
+        } else {
+            String[] split = ip.split(":");
+            return split[0].replace("/", "");
         }
 
         return "";

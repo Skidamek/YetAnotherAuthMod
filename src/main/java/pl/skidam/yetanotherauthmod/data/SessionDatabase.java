@@ -71,6 +71,16 @@ public class SessionDatabase {
         return activeSession(login);
     }
 
+    public boolean moreSessionsOnThisIP(String IP) {
+        int count = 0;
+        for (Session session : sessions.values()) {
+            if (session.IP().equals(IP)) {
+                count++;
+            }
+        }
+        return count > 1;
+    }
+
     private void load() {
         try {
             Files.createDirectories(databasePath.getParent());

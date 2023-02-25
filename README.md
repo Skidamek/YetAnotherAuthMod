@@ -15,7 +15,7 @@ After that you will be sent to the main world. Which I think looks a bit cooler 
 And that's it
 
 # Features
-- Session management: offline accounts only need to log in once every 30 days if they are connecting from the same IP and computer.
+- Session management: offline accounts only need to log in once every 30 days if they are connecting from the same IP / device. However, if multiple players are connecting from the same IP, this system will be disabled for them.
 - Official Mojang authentication for premium accounts: original UUIDs are used for premium accounts so e.g. skins work properly.
 - Limbo world: players are directed to a separate world to login or register.
 

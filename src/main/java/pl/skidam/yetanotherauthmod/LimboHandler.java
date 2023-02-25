@@ -30,14 +30,13 @@ public class LimboHandler extends EarlyPlayNetworkHandler {
     private static final ArmorStandEntity FAKE_ENTITY = new ArmorStandEntity(EntityType.ARMOR_STAND, PolymerCommonUtils.getFakeWorld());
     private static final CommandDispatcher<LimboHandler> COMMANDS = new CommandDispatcher<>();
     private static Text cyclingText;
-    private static boolean loadedToLimbo;
 
     @SuppressWarnings("unchecked")
     public LimboHandler(Context context) {
         super(new Identifier(yaam.MOD_ID), context);
 
         String playerName = this.getPlayer().getGameProfile().getName();
-        String playerIP = Utils.extractContentInBrackets(this.getConnection().getAddress().toString());
+        String playerIP = Utils.formatIP(this.getConnection().getAddress().toString());
         String playerUUID = this.getPlayer().getUuidAsString().replace("-", "").toLowerCase();
 
         // Check if player is authenticated using Mojang account if so join normal game
@@ -69,9 +68,11 @@ public class LimboHandler extends EarlyPlayNetworkHandler {
 
         // Check if player has active session if so join normal game
         if (yaam.sessions.checkSession(playerName, playerIP)) {
-            sendChatMessage("Authenticated using login session!", Formatting.GREEN);
-            this.continueJoining();
-            return;
+            if (!yaam.sessions.moreSessionsOnThisIP(playerIP)) {
+                sendChatMessage("Authenticated using login session!", Formatting.GREEN);
+                this.continueJoining();
+                return;
+            }
         }
 
         // Load into limbo
@@ -94,6 +95,8 @@ public class LimboHandler extends EarlyPlayNetworkHandler {
 
             if (!yaam.sessions.activeSession(username)) {
                 sendChatMessage("Your login session got expired!", Formatting.RED);
+            } else if (yaam.sessions.moreSessionsOnThisIP(playerIP)) {
+                sendChatMessage("You have active session but there are more players playing from the same IP, you need to login manually.", Formatting.YELLOW);
             } else {
                 sendChatMessage("Looks like you are logging from different IP address, login again to activate new session!", Formatting.GREEN);
             }
@@ -104,7 +107,6 @@ public class LimboHandler extends EarlyPlayNetworkHandler {
             cyclingText = Text.literal("Register using /register <password> <confirm_password>").formatted(Formatting.GREEN);
         }
 
-        loadedToLimbo = true;
         this.sendPacket(new CommandTreeS2CPacket((RootCommandNode) COMMANDS.getRoot()));
     }
 
@@ -118,8 +120,10 @@ public class LimboHandler extends EarlyPlayNetworkHandler {
     }
 
     private int loginTime = 60 * 20; // 60 seconds
+    private int waitTime = 5;
     protected void onTick() {
-        if (!loadedToLimbo) {
+        if (waitTime > 0) {
+            waitTime--;
             return;
         }
 
@@ -174,7 +178,6 @@ public class LimboHandler extends EarlyPlayNetworkHandler {
 
 
     static {
-        loadedToLimbo = false;
         FAKE_ENTITY.setPos(0, 64, 0);
         FAKE_ENTITY.setNoGravity(true);
         FAKE_ENTITY.setInvisible(true);
@@ -189,7 +192,7 @@ public class LimboHandler extends EarlyPlayNetworkHandler {
 
     private void registerCommands(boolean playerAlreadyRegistered) {
         String playerName = this.getPlayer().getGameProfile().getName();
-        String playerIP = Utils.extractContentInBrackets(this.getConnection().getAddress().toString());
+        String playerIP = Utils.formatIP(this.getConnection().getAddress().toString());
 
         if (playerAlreadyRegistered) {
 
@@ -201,6 +204,12 @@ public class LimboHandler extends EarlyPlayNetworkHandler {
 
                                     // create session
                                     yaam.sessions.createSession(playerName, playerIP);
+
+                                    if (yaam.sessions.moreSessionsOnThisIP(playerIP)) {
+                                        sendChatMessage("Logged in!", Formatting.GREEN);
+                                        continueJoining();
+                                        return 0;
+                                    }
 
                                     this.disconnect(
                                             Text.literal("Successfully created login session!\n").formatted(Formatting.GREEN)
@@ -217,6 +226,7 @@ public class LimboHandler extends EarlyPlayNetworkHandler {
                                     }
                                     sendChatMessage("Incorrect password, attempt " + loginTries + "/3", Formatting.RED);
                                 }
+
                                 return 0;
                             })
                     )
