@@ -15,11 +15,11 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import pl.skidam.yetanotherauthmod.Utils;
+import pl.skidam.yetanotherauthmod.yaam;
 
 import java.io.IOException;
 
 import static pl.skidam.yetanotherauthmod.yaam.LOGGER;
-import static pl.skidam.yetanotherauthmod.yaam.onlineUUIDs;
 
 @Mixin(value = ServerLoginNetworkHandler.class, priority = 2137)
 public abstract class ServerLoginNetworkHandlerMixin {
@@ -45,45 +45,59 @@ public abstract class ServerLoginNetworkHandlerMixin {
             String playerName = packet.name();
             String playerUUID = packet.profileId().isPresent() ? packet.profileId().get().toString().replace("-", "").toLowerCase() : null;
 
-            if (playerUUID == null) {
-                LOGGER.info("Authenticating " + playerName + " as non-premium player.");
+            if (playerUUID == null) { // strange case, rather non-premium player if so
+                LOGGER.error("{} UUID is null!", playerName);
+                LOGGER.info("Authenticating {} as non-premium player.", playerName);
                 this.state = ServerLoginNetworkHandler.State.READY_TO_ACCEPT;
                 this.profile = new GameProfile(null, playerName);
                 ci.cancel();
 
-            } else if (onlineUUIDs.contains(playerUUID)) {
-                LOGGER.info("Authenticating " + playerName + " as premium player.");
+            } else if (yaam.database.checkLogin(playerUUID, null)) { // 100% premium player
+                LOGGER.info("Authenticating {} as premium player.", playerName);
                 // original mojang auth... (look at the source of the mixin)
 
             } else {
                 String purchasedUUID = Utils.hasPurchasedMinecraft(playerName);
 
-                if (purchasedUUID == null) {
-                    LOGGER.info("Authenticating " + playerName + " as non-premium player.");
+                if (purchasedUUID == null) { // 100% non-premium player
+                    LOGGER.info("Authenticating {} as non-premium player.", playerName);
                     this.state = ServerLoginNetworkHandler.State.READY_TO_ACCEPT;
                     this.profile = new GameProfile(null, playerName);
                     ci.cancel();
 
-                } else if (purchasedUUID.equals(playerUUID)) {
-                    LOGGER.info("Authenticating " + playerName + " as premium player.");
-                    onlineUUIDs.add(purchasedUUID);
+                } else if (purchasedUUID.equals(playerUUID)) { // 100% premium player
+                    LOGGER.info("Authenticating {} as premium player.", playerName);
+                    if (yaam.database.userExists(playerName)) {
+                        // Player bought original mojang account or original premium user owner logged in.
+                        // Let's give player choice if they want to use fresh account or old one from non-premium login.
+                        // If player choose to use fresh account, we will remove old one from minecraft files and database.
+                        // If player choose old account, we need to change files from non-premium uuid to premium uuid.
+
+                        // There are quite a lot of things that can go wrong e.g. compatibility with other mods.
+                        // Other mods can use non-premium uuid to store player data...
+                    }
+
+                    yaam.database.addUser(purchasedUUID, null);
                     // original mojang auth... (look at the source of the mixin)
 
-                } else { // player using premium username without access to this premium account
-
-                    // TODO add all premium players to login database, and if this player is not in database, let this offline player join
-
+                } else if (yaam.database.userExists(purchasedUUID)) { // 100% non-premium: player trying to use premium username without access to this premium account
                     Text reason = Text.literal("This username is taken!\n").formatted(Formatting.RED).append("Please buy original copy of the game or change your username to play!").formatted(Formatting.RED);
                     connection.send(new LoginDisconnectS2CPacket(reason));
                     connection.disconnect(reason);
                     ci.cancel();
+
+                } else { // 100% non-premium: player using premium username but the original owner of this username is not playing on this server
+                    LOGGER.info("Authenticating {} as non-premium player.", playerName);
+                    this.state = ServerLoginNetworkHandler.State.READY_TO_ACCEPT;
+                    this.profile = new GameProfile(null, playerName);
+                    ci.cancel();
                 }
             }
-        } catch (IOException e) {
+        } catch (IOException e) { // Probably mojang api down
             e.printStackTrace();
 
             // kick player on error
-            Text reason = Text.literal("Authentication error. Please contact server admin!\n").formatted(Formatting.RED).append("[" + e.getMessage() + "] More details in server log.").formatted(Formatting.RED);
+            Text reason = Text.literal("Authentication is down. Please contact server admin!\n").formatted(Formatting.RED).append("[" + e.getMessage() + "] More details in server log.").formatted(Formatting.RED);
             connection.send(new LoginDisconnectS2CPacket(reason));
             connection.disconnect(reason);
             ci.cancel();

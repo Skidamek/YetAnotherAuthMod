@@ -20,7 +20,7 @@ public class LoginDatabase {
     public LoginDatabase(Path databasePath) {
         this.databasePath = databasePath;
         this.users = new HashMap<>();
-        this.gson = new GsonBuilder().setPrettyPrinting().create();
+        this.gson = new GsonBuilder().setPrettyPrinting().serializeNulls().create();
         load();
     }
 
@@ -28,7 +28,9 @@ public class LoginDatabase {
         if (users.containsKey(login)) {
             return;
         }
-        password = Utils.sha256(password);
+        if (password != null) { // premium accounts have no password
+            password = Utils.sha256(password);
+        }
         users.put(login, password);
         save();
     }

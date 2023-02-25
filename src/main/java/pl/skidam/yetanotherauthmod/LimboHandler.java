@@ -24,8 +24,6 @@ import net.minecraft.util.Identifier;
 
 import java.util.function.Function;
 
-import static pl.skidam.yetanotherauthmod.yaam.onlineUUIDs;
-
 public class LimboHandler extends EarlyPlayNetworkHandler {
     private static final ArmorStandEntity FAKE_ENTITY = new ArmorStandEntity(EntityType.ARMOR_STAND, PolymerCommonUtils.getFakeWorld());
     private static final CommandDispatcher<LimboHandler> COMMANDS = new CommandDispatcher<>();
@@ -41,7 +39,7 @@ public class LimboHandler extends EarlyPlayNetworkHandler {
         String playerUUID = this.getPlayer().getUuidAsString().replace("-", "").toLowerCase();
 
         // Check if player is authenticated using Mojang account if so join normal game
-        if (onlineUUIDs.contains(playerUUID)) {
+        if (yaam.database.checkLogin(playerUUID, null)) {
             this.sendPacket(new GameMessageS2CPacket(Text.literal("Authenticated using Mojang account!").formatted(Formatting.GREEN), false));
             this.continueJoining();
             return;
