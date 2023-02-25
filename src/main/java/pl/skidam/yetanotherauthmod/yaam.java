@@ -19,7 +19,6 @@ public class yaam implements ModInitializer {
 	public static final Logger LOGGER = LoggerFactory.getLogger(MOD_ID);
 	public static LoginDatabase database;
 	public static SessionDatabase sessions;
-	public static final HashSet<String> onlineUUIDs = new HashSet<>();
 
 	@Override
 	public void onInitialize() {
@@ -29,7 +28,7 @@ public class yaam implements ModInitializer {
 			try {
 				Files.createDirectories(databasePath.getParent());
 				Files.createFile(databasePath);
-			} catch (IOException e) {
+			} catch (Exception e) {
 				e.printStackTrace();
 			}
 		}
@@ -39,7 +38,7 @@ public class yaam implements ModInitializer {
 			try {
 				Files.createDirectories(sessionsPath.getParent());
 				Files.createFile(sessionsPath);
-			} catch (IOException e) {
+			} catch (Exception e) {
 				e.printStackTrace();
 			}
 		}

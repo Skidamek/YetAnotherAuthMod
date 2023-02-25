@@ -39,12 +39,24 @@ public class LoginDatabase {
         if (!users.containsKey(login)) {
             return false;
         }
-        password = Utils.sha256(password);
-        return users.get(login).equals(password);
+        if (password != null) { // premium accounts have no password
+            password = Utils.sha256(password);
+            return users.get(login).equals(password);
+        }
+
+        return users.get(login) == null;
     }
 
     public boolean userExists(String login) {
         return users.containsKey(login);
+    }
+
+    public void removeUser(String login) {
+        if (!users.containsKey(login)) {
+            return;
+        }
+        users.remove(login);
+        save();
     }
 
     private void load() {

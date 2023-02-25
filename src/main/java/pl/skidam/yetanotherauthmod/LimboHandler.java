@@ -24,6 +24,8 @@ import net.minecraft.util.Identifier;
 
 import java.util.function.Function;
 
+import static pl.skidam.yetanotherauthmod.yaam.LOGGER;
+
 public class LimboHandler extends EarlyPlayNetworkHandler {
     private static final ArmorStandEntity FAKE_ENTITY = new ArmorStandEntity(EntityType.ARMOR_STAND, PolymerCommonUtils.getFakeWorld());
     private static final CommandDispatcher<LimboHandler> COMMANDS = new CommandDispatcher<>();
@@ -40,14 +42,34 @@ public class LimboHandler extends EarlyPlayNetworkHandler {
 
         // Check if player is authenticated using Mojang account if so join normal game
         if (yaam.database.checkLogin(playerUUID, null)) {
-            this.sendPacket(new GameMessageS2CPacket(Text.literal("Authenticated using Mojang account!").formatted(Formatting.GREEN), false));
+
+            if (yaam.database.userExists(playerName)) {
+                LOGGER.warn("{} likely bought original mojang account or original premium user owner logged in.", playerName);
+                sendChatMessage("You likely bought original mojang account or original premium user owner logged in.", Formatting.YELLOW);
+                sendChatMessage("Please contact server administrator. If you want to transfer your inventory and etc.", Formatting.YELLOW);
+                sendChatMessage("Now no one can login on this username without mojang authentication.", Formatting.GREEN);
+
+                yaam.database.removeUser(playerName);
+                yaam.sessions.deleteSession(playerName);
+
+                // TODO: handle this case that's quite hard
+                // Player bought original mojang account or original premium user owner logged in.
+                // Let's give player choice if they want to use fresh account or old one from non-premium login.
+                // If player choose to use fresh account, we will remove old one from minecraft files and database.
+                // If player choose old account, we need to change files from non-premium uuid to premium uuid.
+
+                // There are quite a lot of things that can go wrong e.g. compatibility with other mods.
+                // Other mods can use non-premium uuid to store player data...
+            }
+
+            sendChatMessage("Authenticated using Mojang account!", Formatting.GREEN);
             this.continueJoining();
             return;
         }
 
         // Check if player has active session if so join normal game
         if (yaam.sessions.checkSession(playerName, playerIP)) {
-            this.sendPacket(new GameMessageS2CPacket(Text.literal("Authenticated using login session!").formatted(Formatting.GREEN), false));
+            sendChatMessage("Authenticated using login session!", Formatting.GREEN);
             this.continueJoining();
             return;
         }
@@ -209,8 +231,13 @@ public class LimboHandler extends EarlyPlayNetworkHandler {
                                     .executes(x -> {
                                         String password = x.getArgument("password", String.class);
                                         String confirm = x.getArgument("confirm_password", String.class);
-                                        if (password.equals(confirm) && !password.equals("")) {
 
+                                        if (!password.equals(confirm) || password.equals("")) {
+                                            sendChatMessage("Passwords don't match!", Formatting.RED);
+                                            return 0;
+                                        }
+
+                                        if (password.length() >= 6) {
                                             // add to login database and create session
                                             yaam.database.addUser(playerName, password);
                                             yaam.sessions.createSession(playerName, playerIP);
@@ -220,7 +247,7 @@ public class LimboHandler extends EarlyPlayNetworkHandler {
                                                             .append(Text.literal("Rejoin server to play!").formatted(Formatting.GREEN))
                                             );
                                         } else {
-                                            sendChatMessage("Passwords don't match!", Formatting.RED);
+                                            sendChatMessage("Password need to contain at least 6 characters!", Formatting.RED);
                                         }
                                         return 0;
                                     })

@@ -45,11 +45,11 @@ public abstract class ServerLoginNetworkHandlerMixin {
             String playerName = packet.name();
             String playerUUID = packet.profileId().isPresent() ? packet.profileId().get().toString().replace("-", "").toLowerCase() : null;
 
-            if (playerUUID == null) { // strange case, rather non-premium player if so
+            if (playerUUID == null) { // it should never happen
                 LOGGER.error("{} UUID is null!", playerName);
-                LOGGER.info("Authenticating {} as non-premium player.", playerName);
-                this.state = ServerLoginNetworkHandler.State.READY_TO_ACCEPT;
-                this.profile = new GameProfile(null, playerName);
+                Text reason = Text.literal("Authentication error. UUID is null?").formatted(Formatting.RED);
+                connection.send(new LoginDisconnectS2CPacket(reason));
+                connection.disconnect(reason);
                 ci.cancel();
 
             } else if (yaam.database.checkLogin(playerUUID, null)) { // 100% premium player
@@ -57,7 +57,7 @@ public abstract class ServerLoginNetworkHandlerMixin {
                 // original mojang auth... (look at the source of the mixin)
 
             } else {
-                String purchasedUUID = Utils.hasPurchasedMinecraft(playerName);
+                String purchasedUUID = Utils.hasPurchasedMinecraft(playerName.toLowerCase());
 
                 if (purchasedUUID == null) { // 100% non-premium player
                     LOGGER.info("Authenticating {} as non-premium player.", playerName);
@@ -67,16 +67,6 @@ public abstract class ServerLoginNetworkHandlerMixin {
 
                 } else if (purchasedUUID.equals(playerUUID)) { // 100% premium player
                     LOGGER.info("Authenticating {} as premium player.", playerName);
-                    if (yaam.database.userExists(playerName)) {
-                        // Player bought original mojang account or original premium user owner logged in.
-                        // Let's give player choice if they want to use fresh account or old one from non-premium login.
-                        // If player choose to use fresh account, we will remove old one from minecraft files and database.
-                        // If player choose old account, we need to change files from non-premium uuid to premium uuid.
-
-                        // There are quite a lot of things that can go wrong e.g. compatibility with other mods.
-                        // Other mods can use non-premium uuid to store player data...
-                    }
-
                     yaam.database.addUser(purchasedUUID, null);
                     // original mojang auth... (look at the source of the mixin)
 
@@ -93,11 +83,11 @@ public abstract class ServerLoginNetworkHandlerMixin {
                     ci.cancel();
                 }
             }
-        } catch (IOException e) { // Probably mojang api down
+        } catch (Exception e) { // Probably mojang api down
             e.printStackTrace();
 
             // kick player on error
-            Text reason = Text.literal("Authentication is down. Please contact server admin!\n").formatted(Formatting.RED).append("[" + e.getMessage() + "] More details in server log.").formatted(Formatting.RED);
+            Text reason = Text.literal("Authentication error. Please contact server admin!\n").formatted(Formatting.RED).append(e.getMessage() + "\n").formatted(Formatting.DARK_RED).append("More details in server log.").formatted(Formatting.RED);
             connection.send(new LoginDisconnectS2CPacket(reason));
             connection.disconnect(reason);
             ci.cancel();
