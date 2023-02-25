@@ -15,9 +15,9 @@ After that you will be sent to the main world. Which I think looks a bit cooler 
 And that's it
 
 # Features
-- Session management: offline accounts only need to log in once every 30 days if they are connecting from the same IP / device. However, if multiple players are connecting from the same IP, this system will be disabled for them.
-- Official Mojang authentication for premium accounts: original UUIDs are used for premium accounts so e.g. skins work properly.
-- Limbo world: players are directed to a separate world to login or register.
+- Sessions: offline accounts only need to log in once every 30 days if they are connecting from the same IP / device. However, if multiple players are connecting from the same IP, this system will be disabled for them.
+- Mojang authentication for premium accounts: original UUIDs are used for premium accounts so e.g. skins work properly.
+- Limbo: players are directed to a separate fake world to login or register.
 
 # Credits
 Thanks to Patbox, creator of [Polymer](https://modrinth.com/mod/polymer) great server-side library, we are able to easily create the limbo world without the need for a second server or proxy.
