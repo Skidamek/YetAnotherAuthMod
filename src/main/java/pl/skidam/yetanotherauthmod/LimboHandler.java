@@ -91,7 +91,7 @@ public class LimboHandler extends EarlyPlayNetworkHandler {
             sendChatMessage("Welcome again " + username + "!", Formatting.GREEN);
             registerCommands(true);
 
-            cyclingText = Text.literal("Login using /login <password>").formatted(Formatting.GREEN);
+            cyclingText = TextHelper.literal("Login using /login <password>").formatted(Formatting.GREEN);
 
             if (!yaam.sessions.activeSession(username)) {
                 sendChatMessage("Your login session got expired!", Formatting.RED);
@@ -104,7 +104,7 @@ public class LimboHandler extends EarlyPlayNetworkHandler {
             sendChatMessage("Welcome " + username + "!", Formatting.GREEN);
             registerCommands(false);
 
-            cyclingText = Text.literal("Register using /register <password> <confirm_password>").formatted(Formatting.GREEN);
+            cyclingText = TextHelper.literal("Register using /register <password> <confirm_password>").formatted(Formatting.GREEN);
         }
 
         this.sendPacket(new CommandTreeS2CPacket((RootCommandNode) COMMANDS.getRoot()));
@@ -128,7 +128,7 @@ public class LimboHandler extends EarlyPlayNetworkHandler {
         }
 
         if (loginTime == 0) {
-            this.disconnect(Text.literal("Login timeout!").formatted(Formatting.RED));
+            this.disconnect(TextHelper.literal("Login timeout!").formatted(Formatting.RED));
             return;
         }
 
@@ -146,7 +146,7 @@ public class LimboHandler extends EarlyPlayNetworkHandler {
     }
 
     private void sendChatMessage(String text, Formatting formatting) {
-        Text message = Text.literal(text).formatted(formatting);
+        Text message = TextHelper.literal(text).formatted(formatting);
         this.sendPacket(new GameMessageS2CPacket(message, false));
     }
 
@@ -158,7 +158,7 @@ public class LimboHandler extends EarlyPlayNetworkHandler {
                     constructor.apply(
                             Texts.parse(
                                     source,
-                                    Text.literal(message).formatted(formatting).formatted(Formatting.BOLD),
+                                    TextHelper.literal(message).formatted(formatting).formatted(Formatting.BOLD),
                                     this.getPlayer(),
                                     0
                             )
@@ -212,16 +212,16 @@ public class LimboHandler extends EarlyPlayNetworkHandler {
                                     }
 
                                     this.disconnect(
-                                            Text.literal("Successfully created login session!\n").formatted(Formatting.GREEN)
-                                                    .append(Text.literal("Rejoin server to play!").formatted(Formatting.GREEN))
+                                            TextHelper.literal("Successfully created login session!\n").formatted(Formatting.GREEN)
+                                                    .append(TextHelper.literal("Rejoin server to play!").formatted(Formatting.GREEN))
                                     );
 
                                 } else {
                                     loginTries++;
                                     if (loginTries >= 3) {
                                         this.disconnect(
-                                                Text.literal("Too many login attempts!\n").formatted(Formatting.RED)
-                                                        .append(Text.literal("Try again latter!").formatted(Formatting.RED))
+                                                TextHelper.literal("Too many login attempts!\n").formatted(Formatting.RED)
+                                                        .append(TextHelper.literal("Try again latter!").formatted(Formatting.RED))
                                         );
                                     }
                                     sendChatMessage("Incorrect password, attempt " + loginTries + "/3", Formatting.RED);
@@ -253,8 +253,8 @@ public class LimboHandler extends EarlyPlayNetworkHandler {
                                             yaam.sessions.createSession(playerName, playerIP);
 
                                             this.disconnect(
-                                                    Text.literal("Successfully registered!\n").formatted(Formatting.GREEN)
-                                                            .append(Text.literal("Rejoin server to play!").formatted(Formatting.GREEN))
+                                                    TextHelper.literal("Successfully registered!\n").formatted(Formatting.GREEN)
+                                                            .append(TextHelper.literal("Rejoin server to play!").formatted(Formatting.GREEN))
                                             );
                                         } else {
                                             sendChatMessage("Password need to contain at least 6 characters!", Formatting.RED);

@@ -14,10 +14,9 @@ import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+import pl.skidam.yetanotherauthmod.TextHelper;
 import pl.skidam.yetanotherauthmod.Utils;
 import pl.skidam.yetanotherauthmod.yaam;
-
-import java.io.IOException;
 
 import static pl.skidam.yetanotherauthmod.yaam.LOGGER;
 
@@ -47,7 +46,7 @@ public abstract class ServerLoginNetworkHandlerMixin {
 
             if (playerUUID == null) { // it should never happen
                 LOGGER.error("{} UUID is null!", playerName);
-                Text reason = Text.literal("Authentication error. UUID is null?").formatted(Formatting.RED);
+                Text reason = TextHelper.literal("Authentication error. UUID is null?").formatted(Formatting.RED);
                 connection.send(new LoginDisconnectS2CPacket(reason));
                 connection.disconnect(reason);
                 ci.cancel();
@@ -71,7 +70,7 @@ public abstract class ServerLoginNetworkHandlerMixin {
                     // original mojang auth... (look at the source of the mixin)
 
                 } else if (yaam.database.userExists(purchasedUUID)) { // 100% non-premium: player trying to use premium username without access to this premium account
-                    Text reason = Text.literal("This username is taken!\n").formatted(Formatting.RED).append("Please buy original copy of the game or change your username to play!").formatted(Formatting.RED);
+                    Text reason = TextHelper.literal("This username is taken!\n").formatted(Formatting.RED).append("Please buy original copy of the game or change your username to play!").formatted(Formatting.RED);
                     connection.send(new LoginDisconnectS2CPacket(reason));
                     connection.disconnect(reason);
                     ci.cancel();
@@ -87,7 +86,7 @@ public abstract class ServerLoginNetworkHandlerMixin {
             e.printStackTrace();
 
             // kick player on error
-            Text reason = Text.literal("Authentication error. Please contact server admin!\n").formatted(Formatting.RED).append(e.getMessage() + "\n").formatted(Formatting.DARK_RED).append("More details in server log.").formatted(Formatting.RED);
+            Text reason = TextHelper.literal("Authentication error. Please contact server admin!\n").formatted(Formatting.RED).append(e.getMessage() + "\n").formatted(Formatting.DARK_RED).append("More details in server log.").formatted(Formatting.RED);
             connection.send(new LoginDisconnectS2CPacket(reason));
             connection.disconnect(reason);
             ci.cancel();
