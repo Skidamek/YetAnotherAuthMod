@@ -64,7 +64,7 @@ public class SessionDatabase {
             return false;
         }
 
-        if (!sessions.get(login).IP().equals(IP)) {
+        if (!sessions.get(login).getIP().equals(IP)) {
             return false;
         }
 
@@ -74,7 +74,7 @@ public class SessionDatabase {
     public boolean moreSessionsOnThisIP(String IP) {
         int count = 0;
         for (Session session : sessions.values()) {
-            if (session.IP().equals(IP)) {
+            if (session.getIP().equals(IP)) {
                 count++;
             }
         }
@@ -107,9 +107,21 @@ public class SessionDatabase {
     }
 
 
-    private record Session(String IP, String CreationDate) {
-        public String getCreationDate() {
-                return CreationDate;
-            }
+    private static class Session {
+        private final String IP;
+        private final String CreationDate;
+
+        public Session(String IP, String CreationDate) {
+            this.IP = IP;
+            this.CreationDate = CreationDate;
         }
+
+        public String getIP() {
+            return IP;
+        }
+
+        public String getCreationDate() {
+            return CreationDate;
+        }
+    }
 }

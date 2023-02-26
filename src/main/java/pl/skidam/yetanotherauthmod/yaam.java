@@ -1,6 +1,6 @@
 package pl.skidam.yetanotherauthmod;
 
-import eu.pb4.polymer.networking.api.EarlyPlayNetworkHandler;
+import eu.pb4.polymer.api.x.EarlyPlayNetworkHandler;
 import net.fabricmc.api.ModInitializer;
 
 import org.slf4j.Logger;
@@ -8,10 +8,8 @@ import org.slf4j.LoggerFactory;
 import pl.skidam.yetanotherauthmod.data.LoginDatabase;
 import pl.skidam.yetanotherauthmod.data.SessionDatabase;
 
-import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.HashSet;
 
 public class yaam implements ModInitializer {
 

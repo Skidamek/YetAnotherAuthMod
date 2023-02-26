@@ -28,8 +28,7 @@ dependencies {
 	// Fabric API. This is technically optional, but you probably want it anyway.
 	modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
 
-	modImplementation include("eu.pb4:polymer-common:${project.polymer_version}")
-	modImplementation include("eu.pb4:polymer-networking:${project.polymer_version}")
+	modImplementation include("eu.pb4:polymer:${project.polymer_version}")
 }
 
 processResources {

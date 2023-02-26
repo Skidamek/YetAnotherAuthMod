@@ -1,6 +1,7 @@
 package pl.skidam.yetanotherauthmod.mixin;
 
 import com.mojang.authlib.GameProfile;
+import net.minecraft.network.encryption.PlayerPublicKey;
 import net.minecraft.server.PlayerManager;
 import net.minecraft.server.network.ServerPlayerEntity;
 import org.spongepowered.asm.mixin.Mixin;
@@ -16,7 +17,7 @@ import java.util.List;
 public class PlayerManagerMixin {
 
     @Inject(method = "createPlayer", at = @At("RETURN"))
-    private void createPlayer(GameProfile profile, CallbackInfoReturnable<ServerPlayerEntity> cir) {
+    private void createPlayer(GameProfile profile, PlayerPublicKey publicKey, CallbackInfoReturnable<ServerPlayerEntity> cir) {
 
         List<ServerPlayerEntity> players = new ArrayList<>(((PlayerManager) (Object) this).getPlayerList());
 

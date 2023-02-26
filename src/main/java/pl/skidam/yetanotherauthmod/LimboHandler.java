@@ -6,8 +6,8 @@ import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.builder.RequiredArgumentBuilder;
 import com.mojang.brigadier.tree.RootCommandNode;
-import eu.pb4.polymer.networking.api.EarlyPlayNetworkHandler;
-import eu.pb4.polymer.common.api.PolymerCommonUtils;
+import eu.pb4.polymer.api.utils.PolymerUtils;
+import eu.pb4.polymer.api.x.EarlyPlayNetworkHandler;
 import io.netty.buffer.Unpooled;
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.decoration.ArmorStandEntity;
@@ -21,13 +21,15 @@ import net.minecraft.text.Text;
 import net.minecraft.text.Texts;
 import net.minecraft.util.Formatting;
 import net.minecraft.util.Identifier;
+import net.minecraft.world.GameMode;
 
+import java.util.Optional;
 import java.util.function.Function;
 
 import static pl.skidam.yetanotherauthmod.yaam.LOGGER;
 
 public class LimboHandler extends EarlyPlayNetworkHandler {
-    private static final ArmorStandEntity FAKE_ENTITY = new ArmorStandEntity(EntityType.ARMOR_STAND, PolymerCommonUtils.getFakeWorld());
+    private static final ArmorStandEntity FAKE_ENTITY = new ArmorStandEntity(EntityType.ARMOR_STAND, PolymerUtils.getFakeWorld());
     private static final CommandDispatcher<LimboHandler> COMMANDS = new CommandDispatcher<>();
     private static Text cyclingText;
 
@@ -76,9 +78,12 @@ public class LimboHandler extends EarlyPlayNetworkHandler {
         }
 
         // Load into limbo
-        this.sendInitialGameJoin();
+        var player = this.getPlayer();
+        var server = this.getServer();
+        this.sendPacket(new GameJoinS2CPacket(player.getId(), false, GameMode.SPECTATOR, null, server.getWorldRegistryKeys(), server.getRegistryManager(), server.getOverworld().getDimensionKey(), server.getOverworld().getRegistryKey(), 0, server.getPlayerManager().getMaxPlayerCount(), 2, 2, false, false, false, true, Optional.empty()));
+
         this.sendPacket(FAKE_ENTITY.createSpawnPacket());
-        this.sendPacket(new EntityTrackerUpdateS2CPacket(FAKE_ENTITY.getId(), FAKE_ENTITY.getDataTracker().getChangedEntries()));
+        this.sendPacket(new EntityTrackerUpdateS2CPacket(FAKE_ENTITY.getId(), FAKE_ENTITY.getDataTracker(), true));
         this.sendPacket(new SetCameraEntityS2CPacket(FAKE_ENTITY));
         this.sendPacket(new CustomPayloadS2CPacket(CustomPayloadS2CPacket.BRAND, (new PacketByteBuf(Unpooled.buffer())).writeString("limbo")));
         this.sendPacket(new WorldTimeUpdateS2CPacket(0, 18000, false));
@@ -121,7 +126,8 @@ public class LimboHandler extends EarlyPlayNetworkHandler {
 
     private int loginTime = 60 * 20; // 60 seconds
     private int waitTime = 5;
-    protected void onTick() {
+    @Override
+    public void tick() {
         if (waitTime > 0) {
             waitTime--;
             return;
